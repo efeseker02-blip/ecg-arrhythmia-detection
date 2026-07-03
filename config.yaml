@@ -1,0 +1,86 @@
+# =============================================================================
+# ECG Arrhythmia Detection — Central Configuration
+# -----------------------------------------------------------------------------
+# Every hyperparameter and path used across the project lives here so that
+# experiments are reproducible and easy to sweep. Override any value on the
+# command line, e.g. `python -m src.train --config config.yaml --epochs 30`.
+# =============================================================================
+
+# --- Reproducibility --------------------------------------------------------
+seed: 42
+
+# --- Dataset ----------------------------------------------------------------
+data:
+  # Directory where the raw MIT-BIH records (.dat/.hea/.atr) are cached.
+  raw_dir: data/mitdb
+  # Directory where the processed beat tensors (.npz) are written.
+  processed_dir: data/processed
+  # Sampling frequency of the MIT-BIH database in Hz.
+  sampling_rate: 360
+  # Half-window (in samples) taken either side of the R-peak for one beat.
+  # 180 samples ~= 0.5 s at 360 Hz, giving a 360-sample (1 s) beat window.
+  beat_window: 180
+  # Which of the two leads to use (MIT-BIH is 2-lead; 0 == MLII on most records).
+  channel: 0
+  # Fraction of beats reserved for validation / test (train gets the rest).
+  val_size: 0.15
+  test_size: 0.15
+  # Records to exclude — the paced-beat records are conventionally dropped
+  # because they contain non-physiological pacemaker spikes.
+  excluded_records: [102, 104, 107, 217]
+
+# --- Signal processing ------------------------------------------------------
+preprocessing:
+  # Band-pass filter cutoffs (Hz) — removes baseline wander (< 0.5 Hz) and
+  # high-frequency muscle/EMG noise (> 40 Hz) while keeping the QRS complex.
+  bandpass_low: 0.5
+  bandpass_high: 40.0
+  filter_order: 4
+  # Per-beat z-score normalisation (recommended) vs. global min-max.
+  normalization: zscore
+
+# --- Class mapping (AAMI EC57 super-classes) --------------------------------
+# The 15+ MIT-BIH annotation symbols are collapsed into the 5 AAMI classes,
+# which is the clinically meaningful grouping used in the literature.
+classes:
+  N: Normal            # Normal + bundle-branch blocks + escape beats
+  S: Supraventricular  # Atrial / nodal / supraventricular ectopic beats
+  V: Ventricular       # Premature ventricular contractions, ventricular escape
+  F: Fusion            # Fusion of ventricular and normal beats
+  Q: Unknown           # Paced / unclassifiable / fusion-of-paced beats
+
+# --- Model ------------------------------------------------------------------
+model:
+  name: ecg_cnn_1d
+  in_channels: 1
+  num_classes: 5
+  # Channel width of each convolutional block.
+  conv_channels: [32, 64, 128]
+  kernel_size: 7
+  dropout: 0.3
+  # Width of the penultimate fully-connected layer.
+  fc_hidden: 128
+
+# --- Training ---------------------------------------------------------------
+training:
+  epochs: 30
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  # ReduceLROnPlateau scheduler settings.
+  lr_scheduler_patience: 3
+  lr_scheduler_factor: 0.5
+  # Early-stopping patience (epochs without val-F1 improvement).
+  early_stopping_patience: 7
+  # Weight the loss by inverse class frequency to fight class imbalance.
+  use_class_weights: true
+  num_workers: 2
+  # Directories for artefacts.
+  checkpoint_dir: models
+  tensorboard_dir: outputs/tensorboard
+
+# --- Evaluation / output paths ---------------------------------------------
+output:
+  figures_dir: outputs/figures
+  confusion_matrix_dir: outputs/confusion_matrix
+  reports_dir: outputs/reports

@@ -1,0 +1,32 @@
+# ECG Arrhythmia Detection — Python dependencies
+# Tested with Python 3.12 / 3.13. Lower bounds are the versions this project
+# was developed and verified against; upper bounds guard against known-breaking
+# major releases.
+
+# --- Core scientific stack ---
+numpy>=1.26,<3.0
+scipy>=1.11
+pandas>=2.1
+
+# --- Deep learning ---
+torch>=2.2
+tensorboard>=2.15
+
+# --- Machine learning utilities & metrics ---
+scikit-learn>=1.3
+
+# --- Biomedical signal I/O (PhysioNet / MIT-BIH) ---
+wfdb>=4.1
+
+# --- Visualisation ---
+matplotlib>=3.8
+
+# --- Configuration & UX ---
+PyYAML>=6.0
+tqdm>=4.66
+
+# --- Interactive dashboard (optional but recommended) ---
+streamlit>=1.30
+
+# --- Testing ---
+pytest>=7.4

@@ -1,0 +1,36 @@
+[project]
+name = "ecg-arrhythmia-detection"
+version = "1.0.0"
+description = "1-D CNN for ECG heartbeat arrhythmia classification on the MIT-BIH database."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "ECG Arrhythmia Detection contributors" }]
+keywords = ["ecg", "arrhythmia", "deep-learning", "biomedical", "pytorch", "cnn"]
+
+[tool.ruff]
+# Match a modern, readable line length; target the project's Python version.
+line-length = 100
+target-version = "py312"
+extend-exclude = ["notebooks", ".venv"]
+
+[tool.ruff.lint]
+# A sensible, non-noisy rule set: pycodestyle, pyflakes, isort, bugbear,
+# comprehensions, pyupgrade and pep8-naming.
+select = ["E", "F", "I", "B", "C4", "UP", "N"]
+ignore = [
+    "E501",  # line length is handled by the formatter
+    "N812",  # allow `import torch.nn.functional as F`
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may use assert-heavy, less-strict style.
+"tests/*" = ["B011"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
