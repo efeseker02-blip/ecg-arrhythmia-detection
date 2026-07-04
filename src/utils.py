@@ -173,3 +173,26 @@ def ensure_dir(path: str | Path) -> Path:
 def count_parameters(model: torch.nn.Module) -> int:
     """Return the number of trainable parameters in a model."""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def validate_config(config: Config) -> None:
+    """Fail fast on a misconfigured ``config.yaml``.
+
+    Checks the human-authored ``classes`` and ``model`` sections against the
+    project's canonical assumptions so that a typo surfaces immediately with a
+    clear message rather than as a confusing tensor-shape error deep in training.
+    """
+    class_map = config.get("classes", {})
+    if list(class_map.keys()) != AAMI_CLASSES:
+        raise ValueError(
+            "config 'classes' keys must be exactly "
+            f"{AAMI_CLASSES} in order, got {list(class_map.keys())}."
+        )
+    num_classes = config.model.get("num_classes")
+    if num_classes != len(AAMI_CLASSES):
+        raise ValueError(
+            f"config model.num_classes ({num_classes}) must equal the number of "
+            f"AAMI classes ({len(AAMI_CLASSES)})."
+        )
+    if not str(config.model.get("name", "")).strip():
+        raise ValueError("config model.name must be a non-empty identifier.")

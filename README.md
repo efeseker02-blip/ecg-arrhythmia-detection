@@ -281,6 +281,10 @@ Predicted class distribution:
 |:---:|:---:|:---:|
 | `outputs/confusion_matrix/confusion_matrix.png` | `outputs/figures/roc_curves.png` | `outputs/figures/training_history.png` |
 
+Evaluation also writes machine-readable reports: `outputs/reports/metrics.json`,
+`outputs/reports/classification_report.txt`, and a tidy per-class table at
+`outputs/reports/per_class_metrics.csv`.
+
 *(Screenshots populate automatically the first time you run training +
 evaluation — they are git-ignored because they are regenerable.)*
 

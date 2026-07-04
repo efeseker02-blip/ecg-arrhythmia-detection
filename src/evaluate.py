@@ -22,6 +22,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.metrics import (
     accuracy_score,
@@ -35,7 +36,15 @@ from torch.utils.data import DataLoader
 
 from .dataset import create_dataloaders
 from .model import build_model
-from .utils import AAMI_CLASSES, Config, ensure_dir, get_device, get_logger, load_config
+from .utils import (
+    AAMI_CLASSES,
+    Config,
+    ensure_dir,
+    get_device,
+    get_logger,
+    load_config,
+    validate_config,
+)
 from .visualization import plot_confusion_matrix, plot_roc_curves
 
 logger = get_logger(__name__)
@@ -106,6 +115,7 @@ def evaluate(config: Config, checkpoint_path: str | Path) -> dict:
 
     Returns the dict of headline metrics.
     """
+    validate_config(config)
     device = get_device()
     logger.info("Evaluating on device: %s", device)
 
@@ -142,6 +152,12 @@ def evaluate(config: Config, checkpoint_path: str | Path) -> dict:
     (reports_dir / "classification_report.txt").write_text(report_txt, encoding="utf-8")
     with (reports_dir / "metrics.json").open("w", encoding="utf-8") as fh:
         json.dump({"headline": metrics, "per_class": report_dict}, fh, indent=2)
+
+    # A tidy per-class metrics table (precision/recall/F1/support) as CSV — handy
+    # for pasting into a report or spreadsheet.
+    per_class_csv = reports_dir / "per_class_metrics.csv"
+    pd.DataFrame(report_dict).transpose().to_csv(per_class_csv, index_label="class")
+    logger.info("Saved per-class metrics table to %s", per_class_csv)
 
     cm = confusion_matrix(y_true, y_pred, labels=list(range(len(AAMI_CLASSES))))
     plot_confusion_matrix(

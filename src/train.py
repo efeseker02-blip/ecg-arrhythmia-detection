@@ -40,6 +40,7 @@ from .utils import (
     get_logger,
     load_config,
     set_seed,
+    validate_config,
 )
 
 logger = get_logger(__name__)
@@ -165,6 +166,7 @@ def save_checkpoint(
 
 def train(config: Config) -> Path:
     """Train the model end-to-end and return the path to the best checkpoint."""
+    validate_config(config)
     set_seed(config.seed)
     device = get_device()
     logger.info("Using device: %s", device)
@@ -173,7 +175,11 @@ def train(config: Config) -> Path:
 
     input_length = 2 * config.data["beat_window"]
     model = build_model(config.model, input_length=input_length).to(device)
-    logger.info("Model has %s trainable parameters", f"{count_parameters(model):,}")
+    logger.info(
+        "Building model '%s' — %s trainable parameters",
+        config.model.get("name", "ecg_cnn_1d"),
+        f"{count_parameters(model):,}",
+    )
 
     # Class-weighted loss to combat imbalance (see compute_class_weights).
     weight_tensor = (
@@ -253,11 +259,17 @@ def train(config: Config) -> Path:
 
     writer.close()
 
-    # Persist the training history for the plotting utilities.
-    history_path = Path(config.output["reports_dir"])
-    ensure_dir(history_path)
+    # Persist the training history (JSON) and render the loss/accuracy/F1 curves
+    # to a figure so the artefact referenced in the README auto-populates.
+    history_path = ensure_dir(config.output["reports_dir"])
     with (history_path / "training_history.json").open("w", encoding="utf-8") as fh:
         json.dump(history, fh, indent=2)
+    if history:
+        from .visualization import plot_training_history
+
+        fig_path = Path(ensure_dir(config.output["figures_dir"])) / "training_history.png"
+        plot_training_history(history, save_path=fig_path)
+        logger.info("Saved training-history figure to %s", fig_path)
     logger.info("Training complete. Best val macro-F1: %.4f", best_f1)
     return best_path
 
