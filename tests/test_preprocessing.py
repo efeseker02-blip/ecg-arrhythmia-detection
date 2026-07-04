@@ -2,15 +2,49 @@
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 import pytest
 
 from src.preprocessing import (
     augment_beat,
     bandpass_filter,
+    download_database,
     normalize_beat,
     segment_beats,
 )
+
+
+class TestDownloadDatabase:
+    """The downloader must ask WFDB for the whole database correctly."""
+
+    def _fake_wfdb(self, calls: dict) -> types.ModuleType:
+        fake = types.ModuleType("wfdb")
+
+        def dl_database(db, dl_dir, records="all", **kwargs):  # noqa: ANN001
+            calls["db"] = db
+            calls["records"] = records
+
+        fake.dl_database = dl_database
+        return fake
+
+    def test_none_records_requests_all(self, monkeypatch, tmp_path) -> None:
+        # Regression: passing records=None used to reach wfdb as None and crash
+        # with "'NoneType' object is not iterable"; it must become the "all"
+        # sentinel that wfdb expects.
+        calls: dict = {}
+        monkeypatch.setitem(sys.modules, "wfdb", self._fake_wfdb(calls))
+        download_database(tmp_path, records=None)
+        assert calls["records"] == "all"
+        assert calls["db"] == "mitdb"
+
+    def test_explicit_records_passed_through(self, monkeypatch, tmp_path) -> None:
+        calls: dict = {}
+        monkeypatch.setitem(sys.modules, "wfdb", self._fake_wfdb(calls))
+        download_database(tmp_path, records=["100", "101"])
+        assert calls["records"] == ["100", "101"]
 
 
 class TestBandpassFilter:

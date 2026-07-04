@@ -119,7 +119,8 @@ def download_database(
     raw_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Downloading MIT-BIH Arrhythmia Database to %s ...", raw_dir)
     # 'mitdb' is the PhysioNet slug for the MIT-BIH Arrhythmia Database.
-    wfdb.dl_database("mitdb", str(raw_dir), records=records)
+    # wfdb expects the sentinel string "all" (not None) to fetch every record.
+    wfdb.dl_database("mitdb", str(raw_dir), records=records if records else "all")
     logger.info("Download complete.")
 
 
