@@ -1,0 +1,37 @@
+# Keep the Docker build context small and the image lean. Without this file,
+# `COPY . .` would pull the ~1 GB local .venv and any downloaded data into the
+# image and invalidate layer caching on every change.
+
+# Virtual environments (huge, host-specific)
+.venv/
+venv/
+env/
+
+# Version control & CI
+.git/
+.github/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Data, trained models and generated outputs (regenerable / large)
+data/mitdb/
+data/processed/
+models/*.pt
+models/*.pth
+outputs/tensorboard/
+outputs/figures/*.png
+outputs/confusion_matrix/*.png
+outputs/reports/*
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS / editor cruft
+.DS_Store
+.idea/
+.vscode/

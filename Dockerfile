@@ -13,10 +13,9 @@
 # =============================================================================
 FROM python:3.12-slim
 
-# System packages needed by SciPy/Matplotlib wheels at runtime.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# All dependencies (numpy, scipy, torch, scikit-learn, matplotlib, ...) ship
+# prebuilt manylinux wheels for CPython 3.12, so no compiler toolchain is needed
+# — keeping the image small.
 
 WORKDIR /app
 
@@ -30,8 +29,11 @@ ENV PYTHONUNBUFFERED=1 \
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy the project.
+# Copy the project (see .dockerignore for what is excluded from the context).
 COPY . .
+
+# Document the Streamlit dashboard port (used when running the app command).
+EXPOSE 8501
 
 # Default command: verify the build by running the unit tests.
 CMD ["pytest", "-q"]
