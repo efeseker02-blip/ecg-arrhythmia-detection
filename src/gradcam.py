@@ -40,9 +40,26 @@ class GradCAM1D:
         self.target_layer = target_layer or self._find_last_conv(model)
         self._activations: torch.Tensor | None = None
         self._gradients: torch.Tensor | None = None
-        # Persistent hooks capture activations (forward) and gradients (backward).
-        self.target_layer.register_forward_hook(self._save_activation)
-        self.target_layer.register_full_backward_hook(self._save_gradient)
+        # Hooks capture activations (forward) and gradients (backward). We keep
+        # the handles so they can be removed — otherwise repeatedly constructing
+        # a GradCAM1D on the same (e.g. Streamlit-cached) model would stack
+        # duplicate hooks that fire on every pass and never get released.
+        self._handles = [
+            self.target_layer.register_forward_hook(self._save_activation),
+            self.target_layer.register_full_backward_hook(self._save_gradient),
+        ]
+
+    def remove(self) -> None:
+        """Detach all hooks from the target layer."""
+        for handle in self._handles:
+            handle.remove()
+        self._handles = []
+
+    def __enter__(self) -> GradCAM1D:
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        self.remove()
 
     @staticmethod
     def _find_last_conv(model: nn.Module) -> nn.Module:

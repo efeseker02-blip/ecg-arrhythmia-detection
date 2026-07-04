@@ -20,6 +20,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 import torch
@@ -126,13 +127,17 @@ def main() -> None:
         st.subheader("Beat & probability distribution")
         fig = plot_prediction(beat, probs)
         st.pyplot(fig)
+        plt.close(fig)  # release the figure so reruns don't leak memory
     with right:
         st.subheader("Grad-CAM explanation")
-        cam = GradCAM1D(model)
         beat_tensor = torch.from_numpy(beat).float().view(1, 1, -1).to(device)
-        saliency = cam(beat_tensor)
+        # Context manager removes the forward/backward hooks afterwards, so
+        # repeated reruns on the cached model don't stack duplicate hooks.
+        with GradCAM1D(model) as cam:
+            saliency = cam(beat_tensor)
         fig_cam = plot_gradcam(beat, saliency, prediction.predicted_class)
         st.pyplot(fig_cam)
+        plt.close(fig_cam)
         st.caption(
             "Hotter colours mark the samples the model relied on most. A trained "
             "model should focus on the QRS complex."

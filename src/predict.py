@@ -50,6 +50,10 @@ class Prediction:
 
 def _predict_batch(model: torch.nn.Module, beats: np.ndarray, device: torch.device) -> np.ndarray:
     """Return the softmax probability matrix for a batch of ``(N, L)`` beats."""
+    # Force eval mode so Dropout is disabled and BatchNorm uses its running
+    # statistics — otherwise a model left in train() mode gives non-deterministic,
+    # wrong predictions (BatchNorm over a batch of 1 is especially degenerate).
+    model.eval()
     tensor = torch.from_numpy(beats.astype(np.float32)).unsqueeze(1).to(device)  # (N, 1, L)
     with torch.no_grad():
         probs = torch.softmax(model(tensor), dim=1)
@@ -108,6 +112,10 @@ def predict_record(
         fs=config.data["sampling_rate"],
         normalization=config.preprocessing["normalization"],
     )
+    if not beats:
+        # A record with no classifiable beats (or a bad id) would otherwise make
+        # np.stack raise a cryptic ValueError.
+        raise ValueError(f"Record {record_name!r} produced no classifiable beats.")
     signals = np.stack([b.signal for b in beats])
     probs = _predict_batch(model, signals, device)
     predictions = []
@@ -141,24 +149,29 @@ def main() -> None:
     device = get_device()
     model = load_checkpoint_model(args.checkpoint, config, device)
 
+    norm = config.preprocessing["normalization"]
+
     if args.beat:
         beat = np.load(args.beat)
         # If the raw waveform is longer than one beat window, band-pass first.
         if beat.size > 2 * config.data["beat_window"]:
             beat = bandpass_filter(beat, fs=config.data["sampling_rate"])
-        prediction = predict_beat(beat, model, device)
+        prediction = predict_beat(beat, model, device, normalization=norm)
         print(prediction)
         if args.plot:
             from .visualization import plot_prediction
 
             probs = np.array([prediction.probabilities[c] for c in AAMI_CLASSES])
             out = Path(config.output["figures_dir"]) / "single_beat_prediction.png"
-            plot_prediction(normalize_beat(beat), probs, save_path=out)
+            plot_prediction(normalize_beat(beat, method=norm), probs, save_path=out)
             print(f"Saved plot to {out}")
         return
 
     if args.record:
-        predictions = predict_record(args.record, config, model, device)
+        try:
+            predictions = predict_record(args.record, config, model, device)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
         counts = Counter(p.predicted_class for p in predictions)
         mean_conf = float(np.mean([p.confidence for p in predictions]))
         print(f"\nRecord {args.record}: {len(predictions)} beats classified")

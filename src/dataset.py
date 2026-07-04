@@ -228,7 +228,8 @@ def create_dataloaders(
     split_by:
         ``"record"`` for patient-wise splitting (recommended, no leakage) or
         ``"beat"`` for a stratified per-beat split (higher but optimistic
-        scores).
+        scores). Stratification is skipped automatically (with a warning) if any
+        class has fewer than 2 members.
 
     Returns
     -------
@@ -252,16 +253,35 @@ def create_dataloaders(
             config.seed,
         )
     elif split_by == "beat":
+
+        def _stratify_if_possible(y: np.ndarray) -> np.ndarray | None:
+            """Return ``y`` for stratification, or ``None`` if any present class
+            has fewer than 2 members (``train_test_split`` would otherwise raise).
+            """
+            present = np.bincount(y)
+            present = present[present > 0]
+            if present.min() < 2:
+                logger.warning(
+                    "Falling back to an unstratified beat split: a class has "
+                    "fewer than 2 members (min present count = %d).",
+                    int(present.min()),
+                )
+                return None
+            return y
+
         idx = np.arange(len(labels))
         train_idx, temp_idx = train_test_split(
             idx,
             test_size=config.data["val_size"] + config.data["test_size"],
-            stratify=labels,
+            stratify=_stratify_if_possible(labels),
             random_state=config.seed,
         )
         rel_test = config.data["test_size"] / (config.data["val_size"] + config.data["test_size"])
         val_idx, test_idx = train_test_split(
-            temp_idx, test_size=rel_test, stratify=labels[temp_idx], random_state=config.seed
+            temp_idx,
+            test_size=rel_test,
+            stratify=_stratify_if_possible(labels[temp_idx]),
+            random_state=config.seed,
         )
     else:
         raise ValueError(f"Unknown split_by: {split_by!r}")
@@ -297,7 +317,14 @@ def compute_class_weights(labels: np.ndarray, num_classes: int) -> np.ndarray:
     from collapsing to the trivial "everything is normal" solution.
     """
     counts = np.bincount(labels, minlength=num_classes).astype(np.float64)
-    counts[counts == 0] = 1.0  # avoid divide-by-zero for absent classes
-    weights = counts.sum() / (num_classes * counts)
-    weights = weights / weights.mean()  # normalise so the average weight is 1
+    present = counts > 0
+    if not present.any():  # degenerate: no labels at all
+        return np.ones(num_classes, dtype=np.float32)
+    # Give absent classes a weight of 0 so they contribute nothing to the loss.
+    # (Assigning them a synthetic count of 1 would make an absent class look like
+    # the *rarest* class and hand it the *largest* inverse-frequency weight — a
+    # subtle bug that lets a class with no training beats dominate the loss.)
+    weights = np.zeros(num_classes, dtype=np.float64)
+    weights[present] = counts.sum() / (present.sum() * counts[present])
+    weights[present] /= weights[present].mean()  # mean 1 over the present classes
     return weights.astype(np.float32)
