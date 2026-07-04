@@ -192,7 +192,7 @@ Requires **Python 3.12+**.
 
 ```bash
 # 1. Clone
-git clone https://github.com/<your-username>/ecg-arrhythmia-detection.git
+git clone https://github.com/efeseker02-blip/ecg-arrhythmia-detection.git
 cd ecg-arrhythmia-detection
 
 # 2. Create an isolated environment
