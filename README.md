@@ -142,6 +142,13 @@ python download_data.py            # downloads the full database to data/mitdb/
 This gives an honest estimate of generalisation to *new patients* (a
 beat-wise split inflates scores through patient leakage).
 
+**The data at a glance** — the severe class imbalance (~89% normal) and the
+distinct per-class morphology the network must learn:
+
+| Class distribution (log scale) | Example beats per class |
+|:---:|:---:|
+| ![Class distribution](docs/images/class_distribution.png) | ![Sample beats](docs/images/sample_beats.png) |
+
 ---
 
 ## 🧠 Model Architecture
@@ -301,18 +308,24 @@ recall on the minority classes (note the high intra-patient macro-*recall* of
 [Future Improvements](#-future-improvements) for how sequence models and
 RR-interval features would close the inter-patient gap.
 
-**Generated figures** (auto-saved to `outputs/`):
+**Confusion matrices** (normalised, i.e. per-class recall) — the honest
+inter-patient split vs. the optimistic intra-patient split:
 
-| Confusion Matrix | ROC Curves | Training History |
-|:---:|:---:|:---:|
-| `outputs/confusion_matrix/confusion_matrix.png` | `outputs/figures/roc_curves.png` | `outputs/figures/training_history.png` |
+| Inter-patient (record-wise) | Intra-patient (beat-wise) |
+|:---:|:---:|
+| ![Inter-patient confusion matrix](docs/images/confusion_matrix_inter_patient.png) | ![Intra-patient confusion matrix](docs/images/confusion_matrix_intra_patient.png) |
 
-Evaluation also writes machine-readable reports: `outputs/reports/metrics.json`,
+**Training history** and **ROC curves** (intra-patient run):
+
+| Training history | One-vs-rest ROC |
+|:---:|:---:|
+| ![Training history](docs/images/training_history.png) | ![ROC curves](docs/images/roc_curves_intra_patient.png) |
+
+Every run regenerates these under `outputs/` (git-ignored because they are
+reproducible), plus machine-readable reports: `outputs/reports/metrics.json`,
 `outputs/reports/classification_report.txt`, and a tidy per-class table at
-`outputs/reports/per_class_metrics.csv`.
-
-*(Screenshots populate automatically the first time you run training +
-evaluation — they are git-ignored because they are regenerable.)*
+`outputs/reports/per_class_metrics.csv`. The images above are curated snapshots
+kept in `docs/images/` for display.
 
 ---
 
@@ -338,6 +351,7 @@ ecg-arrhythmia-detection/
 │   ├── visualization.py      # Reusable plotting utilities
 │   └── utils.py              # Config, seeding, logging, device helpers
 ├── app/streamlit_app.py      # Interactive dashboard
+├── docs/images/              # Curated result figures shown in this README
 ├── models/                   # Saved checkpoints (git-ignored)
 ├── outputs/                  # Figures, confusion matrices, reports (git-ignored)
 ├── tests/                    # Pytest unit tests
@@ -359,10 +373,16 @@ saliency curve overlaid on the beat. For a well-behaved model, the **QRS
 complex lights up** — confirming the network attends to the physiologically
 relevant region rather than noise.
 
+Below, the trained model classifies a real **ventricular** beat (confidence
+0.95) and its attention (bright = important) concentrates exactly on the wide,
+abnormal QRS complex — the correct clinical feature:
+
+![Grad-CAM on a real ventricular beat](docs/images/gradcam_example.png)
+
 ```python
 from src.gradcam import GradCAM1D, plot_gradcam
-cam = GradCAM1D(model)
-saliency = cam(beat_tensor)                    # (L,) importance in [0, 1]
+with GradCAM1D(model) as cam:                  # context manager cleans up hooks
+    saliency = cam(beat_tensor)                # (L,) importance in [0, 1]
 plot_gradcam(beat, saliency, "V", save_path="outputs/figures/gradcam.png")
 ```
 
