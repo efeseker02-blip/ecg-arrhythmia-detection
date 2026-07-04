@@ -221,8 +221,11 @@ python download_data.py
 python -m src.train --config config.yaml
 #    Override on the fly:
 python -m src.train --epochs 40 --batch-size 256 --lr 5e-4
+#    Choose the evaluation paradigm (see Results): record-wise (default) or beat-wise
+python -m src.train --split-by beat
 
 # 3. Evaluate the best checkpoint on the held-out test set
+#    (use the SAME --split-by the model was trained with)
 python -m src.evaluate --checkpoint models/best_model.pt
 #    → writes classification report, confusion matrix & ROC curves to outputs/
 
@@ -251,29 +254,52 @@ Predicted class distribution:
 
 ## 📊 Results
 
-> The numbers below are **representative targets** on the standard patient-wise
-> split; re-run `python -m src.evaluate` after training to regenerate the exact
-> figures and tables for your run (they are written to `outputs/reports/`).
+These are **real, measured results** from training this repository on all 44
+non-paced MIT-BIH records (100,682 beats), 30 epochs with early stopping, seed
+42, on Apple-Silicon (MPS). Re-run `python -m src.evaluate` to regenerate the
+exact tables and figures (`outputs/reports/`).
+
+Results are reported under **two evaluation paradigms**, because *how you split
+the data matters more than the model*:
+
+- **Inter-patient (record-wise, the default):** no beat from a test patient is
+  ever seen in training. This is the honest, clinically meaningful — and much
+  harder — setting. Reproduce with `--split-by record`.
+- **Intra-patient (beat-wise):** a stratified per-beat split. Easier and the
+  most commonly quoted setting in tutorials, but it *leaks* patients across
+  train and test, inflating scores. Reproduce with `--split-by beat`.
 
 **Headline metrics (test set):**
 
-| Metric | Score |
-|--------|:-----:|
-| Accuracy | ~0.98 |
-| Macro Precision | ~0.88 |
-| Macro Recall | ~0.89 |
-| **Macro F1** | **~0.88** |
-| Weighted F1 | ~0.98 |
+| Metric | Inter-patient (record-wise) | Intra-patient (beat-wise) |
+|--------|:---------------------------:|:-------------------------:|
+| Accuracy | 0.754 | **0.933** |
+| Macro Precision | 0.387 | 0.524 |
+| Macro Recall | 0.465 | 0.816 |
+| Macro F1 | 0.382 | 0.580 |
+| Weighted F1 | 0.738 | **0.944** |
 
-**Per-class performance:**
+**Per-class F1 (test set):**
 
-| Class | Precision | Recall | F1 | Support |
-|:-----:|:---------:|:------:|:--:|:-------:|
-| N (Normal) | 0.99 | 0.99 | 0.99 | ~72,000 |
-| S (Supraventricular) | 0.83 | 0.80 | 0.81 | ~2,700 |
-| V (Ventricular) | 0.95 | 0.94 | 0.94 | ~7,000 |
-| F (Fusion) | 0.78 | 0.75 | 0.76 | ~800 |
-| Q (Unknown/Paced) | 0.98 | 0.97 | 0.97 | ~7,000 |
+| Class | Inter-patient F1 | Intra-patient F1 |
+|:-----:|:----------------:|:----------------:|
+| N (Normal) | 0.847 | 0.963 |
+| S (Supraventricular) | 0.030 | 0.678 |
+| V (Ventricular) | 0.648 | 0.884 |
+| F (Fusion) | 0.004 | 0.350 |
+| Q (Unknown/Paced) | — (absent from split) | 0.028 |
+
+**Reading the results.** The model classifies the dominant **N** and **V**
+beats well in both settings. The gap between the two columns is the honest cost
+of *not* leaking patients: supraventricular (**S**) beats, which are hard to
+tell from normal beats on single-lead morphology without rhythm context,
+collapse from F1 0.68 to 0.03 across unseen patients. The rare **F** and **Q**
+classes (0.8% and 0.01% of beats) remain hard everywhere — a genuine open
+problem, not a bug. The class-weighted loss deliberately trades precision for
+recall on the minority classes (note the high intra-patient macro-*recall* of
+0.82), so that dangerous ectopic beats are less likely to be missed. See
+[Future Improvements](#-future-improvements) for how sequence models and
+RR-interval features would close the inter-patient gap.
 
 **Generated figures** (auto-saved to `outputs/`):
 
