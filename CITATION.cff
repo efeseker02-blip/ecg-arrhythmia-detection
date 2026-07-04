@@ -1,0 +1,36 @@
+# This CITATION.cff file lets GitHub render a "Cite this repository" button and
+# helps others credit the project correctly. See https://citation-file-format.github.io
+cff-version: 1.2.0
+title: "ECG Arrhythmia Detection using Deep Learning"
+message: "If you use this software, please cite it and the MIT-BIH database (below)."
+type: software
+authors:
+  - name: "ECG Arrhythmia Detection contributors"
+abstract: >-
+  A reproducible 1-D convolutional neural network that classifies ECG heartbeats
+  into the five AAMI EC57 arrhythmia super-classes, trained on the MIT-BIH
+  Arrhythmia Database, with signal-processing preprocessing, Grad-CAM
+  explainability, and honest inter-patient vs. intra-patient evaluation.
+keywords:
+  - ecg
+  - arrhythmia
+  - deep-learning
+  - biomedical-engineering
+  - signal-processing
+  - pytorch
+license: MIT
+version: "1.0.0"
+references:
+  - type: article
+    title: "The impact of the MIT-BIH Arrhythmia Database"
+    authors:
+      - family-names: Moody
+        given-names: George B.
+      - family-names: Mark
+        given-names: Roger G.
+    journal: "IEEE Engineering in Medicine and Biology Magazine"
+    volume: 20
+    issue: 3
+    year: 2001
+    start: 45
+    end: 50

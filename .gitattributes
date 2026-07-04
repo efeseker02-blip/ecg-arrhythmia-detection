@@ -1,0 +1,13 @@
+# Normalise line endings so the repo is consistent across macOS/Linux/Windows.
+* text=auto eol=lf
+
+# Treat these as binary (no diff/merge, no EOL normalisation).
+*.png binary
+*.jpg binary
+*.pt  binary
+*.pth binary
+*.npz binary
+
+# Collapse Jupyter notebooks in diffs and mark them for GitHub's linguist so
+# the repo's language stats reflect the Python source, not notebook JSON.
+*.ipynb linguist-documentation
