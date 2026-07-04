@@ -32,7 +32,7 @@ jobs:
           pip install -r requirements.txt
           # Pin Ruff to the same version as .pre-commit-config.yaml so local
           # hooks and CI never disagree on lint/format results.
-          pip install ruff==0.6.9
+          pip install ruff==0.15.20
 
       - name: Lint with Ruff
         run: ruff check src tests
