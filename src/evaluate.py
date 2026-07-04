@@ -187,6 +187,19 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Evaluate a trained ECG model.")
     parser.add_argument("--config", type=str, default="config.yaml")
     parser.add_argument("--checkpoint", type=str, default="models/best_model.pt")
+    parser.add_argument(
+        "--split-by",
+        type=str,
+        default=None,
+        choices=["record", "beat"],
+        help="Must match how the checkpoint was trained (default: config value).",
+    )
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=None,
+        help="DataLoader worker processes (0 = load in the main process).",
+    )
     return parser.parse_args()
 
 
@@ -194,6 +207,10 @@ def main() -> None:
     """CLI entry point for evaluation."""
     args = parse_args()
     config = load_config(args.config)
+    if args.split_by is not None:
+        config.data["split_by"] = args.split_by
+    if args.num_workers is not None:
+        config.training["num_workers"] = args.num_workers
     evaluate(config, args.checkpoint)
 
 

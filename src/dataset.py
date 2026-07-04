@@ -217,7 +217,7 @@ def _split_indices(
 def create_dataloaders(
     config: Config,
     *,
-    split_by: str = "record",
+    split_by: str | None = None,
 ) -> tuple[DataLoader, DataLoader, DataLoader, np.ndarray]:
     """Build train/val/test :class:`DataLoader`s from the cached dataset.
 
@@ -229,7 +229,8 @@ def create_dataloaders(
         ``"record"`` for patient-wise splitting (recommended, no leakage) or
         ``"beat"`` for a stratified per-beat split (higher but optimistic
         scores). Stratification is skipped automatically (with a warning) if any
-        class has fewer than 2 members.
+        class has fewer than 2 members. Defaults to ``config.data['split_by']``
+        (falling back to ``"record"``) when not given explicitly.
 
     Returns
     -------
@@ -237,6 +238,8 @@ def create_dataloaders(
         The three loaders plus an array of inverse-frequency class weights
         (float32) for the loss function.
     """
+    if split_by is None:
+        split_by = config.data.get("split_by", "record")
     cache_path = build_dataset(config)
     # The cache is produced by build_dataset() in this same project (trusted),
     # and every stored array has an explicit numeric or fixed-width unicode

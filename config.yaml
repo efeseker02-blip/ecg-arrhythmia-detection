@@ -25,6 +25,13 @@ data:
   # Fraction of beats reserved for validation / test (train gets the rest).
   val_size: 0.15
   test_size: 0.15
+  # How to split beats into train/val/test:
+  #   "record" — patient-wise (inter-patient): no beat from a test patient is
+  #              ever seen in training. Honest but harder — the recommended
+  #              default and the clinically meaningful evaluation.
+  #   "beat"   — stratified per-beat (intra-patient): easier, higher scores, but
+  #              leaks patients across splits. Useful as a comparison benchmark.
+  split_by: record
   # Records to exclude — the paced-beat records are conventionally dropped
   # because they contain non-physiological pacemaker spikes.
   excluded_records: [102, 104, 107, 217]

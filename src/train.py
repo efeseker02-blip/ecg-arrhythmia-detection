@@ -282,6 +282,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--lr", type=float, default=None)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=None,
+        help="DataLoader worker processes (0 = load in the main process).",
+    )
+    parser.add_argument(
+        "--split-by",
+        type=str,
+        default=None,
+        choices=["record", "beat"],
+        help="Split strategy: 'record' (patient-wise) or 'beat' (per-beat).",
+    )
     return parser.parse_args()
 
 
@@ -297,6 +310,10 @@ def main() -> None:
         config.training["learning_rate"] = args.lr
     if args.seed is not None:
         config.raw["seed"] = args.seed
+    if args.num_workers is not None:
+        config.training["num_workers"] = args.num_workers
+    if args.split_by is not None:
+        config.data["split_by"] = args.split_by
     train(config)
 
 
